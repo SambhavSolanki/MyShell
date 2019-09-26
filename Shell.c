@@ -13,6 +13,8 @@
 
 char ipath[1000];
 char * hpath;
+int globalpid;
+int currpid;
 
 int status = 1;
 void clearScreen()
@@ -50,6 +52,7 @@ void ChangeFromTilda(char path[])
 
 #include"echo.h"
 #include <netdb.h>
+void Zhandler(int sig);
 
 
 void ExecuteFunction(char command[])
@@ -112,18 +115,22 @@ void ExecuteFunction(char command[])
         int pidid = fork();
         if(pidid == 0)
         {
+          setpgid(0,0);
           if(execvp(args[0],args) < 0)
           perror("Error");
           exit(0);
         }
         else
+        {
           wait(0);
+          printf("\n%s with pid %d exited normally\n",args[0],pidid);
+        }
 
-        printf("\n%s with pid %d exited normally\n",args[0],getpid());
+        // setpgid(0,globalpid);
         printf(ANSI_COLOR_CYAN">"ANSI_COLOR_RESET);
+        // setpid(0,globalpid);
+        // loop_shell();
         exit(0);
-
-
       }
       else
       {
@@ -140,6 +147,7 @@ void ExecuteFunction(char command[])
     {
       if(pid == 0)
       {
+        printf("%d\n",getpid());
         if(execvp(args[0],args) < 0)
         perror("Error");
         // kill(getpid(), SIGKILL);
@@ -147,7 +155,8 @@ void ExecuteFunction(char command[])
       }
       else
       {
-        waitpid(pid, &stat, 0);
+        currpid = pid;
+        waitpid(pid, &stat, WUNTRACED);
       }
       char * yy = NULL;
       j = 0;
@@ -181,7 +190,7 @@ void loop_shell()
     //Breaking up all commands seperated by ";"
     char * cms = malloc(sizeof(char) * 1024);
     long unsigned int lsize = 1024;
-    getline(&cms,&lsize,stdin);
+    fgets(cms,lsize,stdin);
     char *cmd = strtok(cms,";");
     while(cmd != NULL)
     {
@@ -195,6 +204,16 @@ void loop_shell()
       cmd = strtok(NULL,";");
     }
   }
+}
+
+void Zhandler(int sig)
+{
+  return;
+}
+
+void Chandler(int sig)
+{
+  return;
 }
 
 int main(int argc, char **argv)
@@ -214,6 +233,10 @@ int main(int argc, char **argv)
   printf("%s\n",hpath);
   StoreTilda(hpath);
   clearScreen();
-  loop_shell(hpath);
+  globalpid = getpid();
+  currpid = globalpid;
+  signal(SIGINT,Chandler);
+  signal(SIGTSTP,Zhandler);
+  loop_shell();
   return 0;
 }

@@ -35,10 +35,9 @@ void pinfoFunc(char *args[])
   {
     printf("Process status ");
     long unsigned int lsize = 1000;
-    char * cuf;
-    getline(&cuf,&lsize,pFile);
     char buf[1000];
-    strcpy(buf,cuf);
+    fgets(buf,lsize,pFile);
+    // strcpy(buf,cuf);
     for(int i = 0;i<strlen(buf);i++)
     {
       if(!strncmp(buf+i,")",1))
@@ -46,7 +45,6 @@ void pinfoFunc(char *args[])
         printf("%c\n",buf[i+2]);
       }
     }
-
     fclose(pFile);
   }
   else
@@ -75,6 +73,7 @@ void pinfoFunc(char *args[])
   }
 
   free(pid);
+
 
   // printf("%s\n",status);
 

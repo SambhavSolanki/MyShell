@@ -11,10 +11,26 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
+struct JobList{
+  int pid;
+  char name[100];
+  int stat;
+  int st;
+};
+
+struct JobList Jobs[100];
+int no=0;
 char ipath[1000];
 char * hpath;
 int globalpid;
+int globalpgid;
 int currpid;
+static int fin;
+static int fout;
+static int ferr;
+static fpos_t inpos;
+static fpos_t outpos;
+static fpos_t errpos;
 
 int status = 1;
 void clearScreen()
@@ -49,10 +65,10 @@ void ChangeFromTilda(char path[])
 #include"cd.h"
 #include"ls.h"
 #include"pinfo.h"
-
+#include"fgbg.h"
 #include"echo.h"
+#include"jobs.h"
 #include <netdb.h>
-void Zhandler(int sig);
 
 
 void ExecuteFunction(char command[])
@@ -66,6 +82,11 @@ void ExecuteFunction(char command[])
   {
       strncpy(command+strlen(command)-2,"",1);
     // strncpy(command+strlen(command)-3,"\n",1);
+    jflag = 1;
+  }
+  else if(!strncmp(command+strlen(command)-1,"&",1))
+  {
+    strncpy(command+strlen(command)-1,"",1);
     jflag = 1;
   }
   int j = 0;
@@ -90,6 +111,9 @@ void ExecuteFunction(char command[])
     argno--;
     // strcpy(args[argno],"\0");
   }
+  // printf("Args[0] = %s\n",args[0]);
+  // printf("Args[1] = %s\n",args[1]);
+  // printf("Args[2] = %s\n",args[2]);
 
   //Executing the command
   if(!strncmp(args[0],"quit",strlen(args[0])) || !strncmp(args[0],"quit\n",strlen(args[0])))
@@ -104,6 +128,16 @@ void ExecuteFunction(char command[])
   EchoStuff(tmp);
   else if(!strncmp(args[0],"pinfo",strlen(args[0])) || !strncmp(args[0],"pinfo\n ",strlen(args[0])))
   pinfoFunc(args);
+  else if(!strncmp(args[0],"jobs",strlen(args[0])) || !strncmp(args[0],"jobs\n ",strlen(args[0])))
+  JobsFunc();
+  else if(!strncmp(args[0],"overkill",strlen(args[0])) || !strncmp(args[0],"overkill\n ",strlen(args[0])))
+  overkill();
+  else if(!strncmp(args[0],"bg",strlen(args[0])) || !strncmp(args[0],"bg\n ",strlen(args[0])))
+  bg(args);
+  else if(!strncmp(args[0],"fg",strlen(args[0])) || !strncmp(args[0],"fg\n ",strlen(args[0])))
+  fg(args);
+  else if(!strncmp(args[0],"kjob",strlen(args[0])) || !strncmp(args[0],"kjob\n ",strlen(args[0])))
+  kjob(args);
   else
   {
     int stat;
@@ -112,28 +146,33 @@ void ExecuteFunction(char command[])
     {
       if(pid == 0)
       {
-        int pidid = fork();
-        if(pidid == 0)
-        {
+        // int pidid = fork();
+        // if(pidid == 0)
+        // {
           setpgid(0,0);
+
           if(execvp(args[0],args) < 0)
           perror("Error");
           exit(0);
-        }
-        else
-        {
-          wait(0);
-          printf("\n%s with pid %d exited normally\n",args[0],pidid);
-        }
-
-        // setpgid(0,globalpid);
-        printf(ANSI_COLOR_CYAN">"ANSI_COLOR_RESET);
-        // setpid(0,globalpid);
-        // loop_shell();
-        exit(0);
+        // }
+      //   else
+      //   {
+      //     wait(0);
+      //     RemoveJob(pid);
+      //     printf("\n%s with pid %d exited normally\n",args[0],pidid);
+      //   }
+      //
+      //   // setpgid(0,globalpid);
+      //   printf(ANSI_COLOR_CYAN">"ANSI_COLOR_RESET);
+      //   // setpid(0,globalpid);
+      //   // loop_shell();
+      //   exit(0);
       }
       else
       {
+        // printf("%d\n",pid);
+        AddJob(pid,args[0],1);
+        // wait(pid,&stat, WNOHANG);
         char * yy = NULL;
         j = 0;
         while(j<100)
@@ -147,7 +186,7 @@ void ExecuteFunction(char command[])
     {
       if(pid == 0)
       {
-        printf("%d\n",getpid());
+        setpgid(0,0);
         if(execvp(args[0],args) < 0)
         perror("Error");
         // kill(getpid(), SIGKILL);
@@ -155,8 +194,13 @@ void ExecuteFunction(char command[])
       }
       else
       {
+        tcsetpgrp(0,pid);
         currpid = pid;
-        waitpid(pid, &stat, WUNTRACED);
+        AddJob(pid,args[0],0);
+        signal(SIGTTOU, SIG_IGN);
+        RemoveJob(pid);
+        tcsetpgrp(0,getpid());
+        signal(SIGTTOU, SIG_DFL);
       }
       char * yy = NULL;
       j = 0;
@@ -174,17 +218,20 @@ void ExecuteFunction(char command[])
 
 }
 
+void chandler(int sig);
+
 void loop_shell()
 {
   char* cmd;
   while(status){
     //Printing Display Requirement
+    signal(SIGCHLD,chandler);
     char * printpath = malloc(sizeof(char) * 1000);
     getRelative(hpath,printpath);
     char * hostname = malloc(sizeof(char) * 1024);
     hostname[1023] = '\0';
     gethostname(hostname, 1023);
-    printf(ANSI_COLOR_CYAN "<" ANSI_COLOR_RED"%s"ANSI_COLOR_CYAN"@"ANSI_COLOR_BLUE"%s:%s"ANSI_COLOR_CYAN ">:"ANSI_COLOR_RESET,getenv("USER"),hostname,printpath);
+    printf(""ANSI_COLOR_CYAN "<" ANSI_COLOR_RED"%s"ANSI_COLOR_CYAN"@"ANSI_COLOR_BLUE"%s:%s"ANSI_COLOR_CYAN ">:"ANSI_COLOR_RESET,getenv("USER"),hostname,printpath);
     // printf( "<%s@%s:%s>:" ,getenv("USER"),hostname,printpath);
 
     //Breaking up all commands seperated by ";"
@@ -200,6 +247,7 @@ void loop_shell()
       for(int i = 0;i < 1000;i++)
         tmd[i] = cmd[i];
       //Executing each command
+      // printf("Executing %s\n",tmd);
       ExecuteFunction(tmd);
       cmd = strtok(NULL,";");
     }
@@ -214,6 +262,34 @@ void Zhandler(int sig)
 void Chandler(int sig)
 {
   return;
+}
+
+void chandler(int sig)
+{
+    pid_t pid;
+    int   status;
+    pid = waitpid(-1, &status, WNOHANG);
+    if(pid > 0)
+    {
+      char * printpath = malloc(sizeof(char) * 1000);
+      getRelative(hpath,printpath);
+      char * hostname = malloc(sizeof(char) * 1024);
+      gethostname(hostname, 1023);
+      hostname[1023] = '\0';
+      for(int i = 0;i<no;i++)
+      {
+        if(Jobs[i].stat == pid || Jobs[i].pid == pid)
+        {
+          printf("\n[%d]\t",pid);
+          printf("%s\texited\n",Jobs[i].name);
+          fflush(stdout);
+          printf(""ANSI_COLOR_CYAN "<" ANSI_COLOR_RED"%s"ANSI_COLOR_CYAN"@"ANSI_COLOR_BLUE"%s:%s"ANSI_COLOR_CYAN ">:"ANSI_COLOR_RESET"\n",getenv("USER"),hostname,printpath);
+        }
+      }
+      RemoveJob(pid);
+      // printf("HI\n");
+
+    }
 }
 
 int main(int argc, char **argv)

@@ -1,19 +1,25 @@
 #include<stdio.h>
 
-void EchoStuff(char * cmd)
+void EchoStuff(char * cmd[])
 {
-
-  char * rest = NULL;
-  char *token;
-  token = strtok_r(cmd, " \t \n", &rest);
-  token = strtok_r(NULL,"\n",&rest);
-  if(token == NULL)
-  return;
-  if(!strncmp(token,"\"",1) && !strncmp(token + strlen(token)-1 ,"\"",1))
+  int k = 1;
+  while(cmd[k] != NULL)
   {
-        token[strlen(token)-1] = '\0';
-        printf("%s\n",token+1);
+    if(!strncmp(cmd[k],"\"",1) && !strncmp(cmd[k] + strlen(cmd[k])-1 ,"\"",1))
+    {
+      cmd[k][strlen(cmd[k])-1] = '\0';
+      printf("%s\n",cmd[k]+1);
+    }
+    else
+    printf("%s\n",cmd[k]);
+    k++;
   }
-  else
-  printf("%s\n",token);
+
+  // char * rest = NULL;
+  // char *token;
+  // token = strtok_r(cmd, " \t \n", &rest);
+  // token = strtok_r(NULL,"\n",&rest);
+  // if(token == NULL)
+  // return;
+
 }

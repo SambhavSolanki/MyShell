@@ -5,6 +5,7 @@
 #include<sys/types.h>
 #include<sys/wait.h>
 #include <limits.h>
+#include<fcntl.h>
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_BLUE    "\x1b[34m"
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
@@ -111,9 +112,6 @@ void ExecuteFunction(char command[])
     argno--;
     // strcpy(args[argno],"\0");
   }
-  // printf("Args[0] = %s\n",args[0]);
-  // printf("Args[1] = %s\n",args[1]);
-  // printf("Args[2] = %s\n",args[2]);
 
   //Executing the command
   if(!strncmp(args[0],"quit",strlen(args[0])) || !strncmp(args[0],"quit\n",strlen(args[0])))
@@ -125,7 +123,7 @@ void ExecuteFunction(char command[])
   else if(!strncmp(args[0],"pwd",strlen(args[0])) || !strncmp(args[0],"pwd\n ",strlen(args[0])))
   PrintPwd();
   else if(!strncmp(args[0],"echo",strlen(args[0])) || !strncmp(args[0],"echo\n ",strlen(args[0])))
-  EchoStuff(tmp);
+  EchoStuff(args);
   else if(!strncmp(args[0],"pinfo",strlen(args[0])) || !strncmp(args[0],"pinfo\n ",strlen(args[0])))
   pinfoFunc(args);
   else if(!strncmp(args[0],"jobs",strlen(args[0])) || !strncmp(args[0],"jobs\n ",strlen(args[0])))
@@ -146,41 +144,23 @@ void ExecuteFunction(char command[])
     {
       if(pid == 0)
       {
-        // int pidid = fork();
-        // if(pidid == 0)
-        // {
           setpgid(0,0);
-
           if(execvp(args[0],args) < 0)
           perror("Error");
           exit(0);
-        // }
-      //   else
-      //   {
-      //     wait(0);
-      //     RemoveJob(pid);
-      //     printf("\n%s with pid %d exited normally\n",args[0],pidid);
-      //   }
-      //
-      //   // setpgid(0,globalpid);
-      //   printf(ANSI_COLOR_CYAN">"ANSI_COLOR_RESET);
-      //   // setpid(0,globalpid);
-      //   // loop_shell();
-      //   exit(0);
       }
       else
       {
-        // printf("%d\n",pid);
         AddJob(pid,args[0],1);
-        // wait(pid,&stat, WNOHANG);
         char * yy = NULL;
         j = 0;
-        while(j<100)
-        args[j++] = yy;
-        return;
+        while(j<argno && args[j] != NULL)
+        {
+          memset(args[j], 0 , strlen(args[j]));
+          args[j] = yy;
+          j++;
+        }
       }
-      // return;
-
     }
     else
     {
@@ -189,7 +169,6 @@ void ExecuteFunction(char command[])
         setpgid(0,0);
         if(execvp(args[0],args) < 0)
         perror("Error");
-        // kill(getpid(), SIGKILL);
         exit(0);
       }
       else
@@ -204,18 +183,252 @@ void ExecuteFunction(char command[])
       }
       char * yy = NULL;
       j = 0;
-      while(j<100)
-      args[j++] = yy;
-      return;
-
+      while(j<argno && args[j] != NULL)
+      {
+        memset(args[j], 0 , strlen(args[j]));
+        args[j] = yy;
+        j++;
+      }
     }
   }
   char * yy = NULL;
   j = 0;
-  while(j<100)
-  args[j++] = yy;
+  while(j<argno && args[j] != NULL)
+  {
+    memset(args[j], 0 , strlen(args[j]));
+    args[j] = yy;
+    j++;
+  }
   return;
 
+}
+
+void ExecuteRedirection(char command[])
+{
+  int p1 = -1,p2 = -1,p3=-1;
+  int k = strlen(command);
+  while(k--)
+  {
+      if(!strncmp(command+k-1,">>",2))
+      {
+        if(p1==-1 && p2==-1 && p3==-1)
+        p2 = k-1;
+        else
+        printf("Invalid redirection\n");
+        k--;
+      }
+      else if(!strncmp(command+k,">",1))
+      {
+        if(p1==-1 && p2==-1 && p3==-1)
+        p1 = k;
+        else
+        printf("Invalid redirection\n");
+      }
+      else if(!strncmp(command+k,"<",1))
+      {
+        if(p3==-1)
+        p3 = k;
+        else
+        printf("Invalid redirection\n");
+      }
+  }
+  if(p1 != -1 && p3 != -1)
+  {
+    char *args[100];
+    int top = 0;
+    char *save;
+    char *token = strtok_r(command,"<",&save);
+    args[0] = token;
+    token = strtok_r(NULL,"> \t \n",&save);
+    args[1] = token;
+    token = strtok_r(NULL,"> \t \n",&save);
+    args[2] = token;
+    int res = dup(0);
+    int l = 0;
+    int fd = open(args[1],O_RDONLY,644);
+    int fg = open(args[2],O_CREAT | O_WRONLY | O_TRUNC,644);
+    if(fd == -1)
+    {
+      perror("Failed to open file 1");
+      close(fd);
+      return;
+    }
+    if(fg == -1)
+    {
+      perror("Failed to open file 2");
+      close(fg);
+      return;
+    }
+    dup2(fg,1);
+    dup2(fd,0);
+    ExecuteRedirection(args[0]);
+    close(fd);
+    close(fg);
+
+  }
+  else if(p2 != -1 && p3 != -1)
+  {
+    char *args[100];
+    int top = 0;
+    char *save;
+    char *token = strtok_r(command,"<",&save);
+    args[0] = token;
+    token = strtok_r(NULL,">> \t \n",&save);
+    args[1] = token;
+    token = strtok_r(NULL,"> \t \n",&save);
+    args[2] = token;
+    int res = dup(0);
+    int l = 0;
+    int fd = open(args[1],O_RDONLY,644);
+    int fg = open(args[2],O_CREAT | O_WRONLY | O_APPEND,644);
+    if(fd == -1)
+    {
+      perror("Failed to open file 1");
+      close(fd);
+      return;
+    }
+    if(fg == -1)
+    {
+      perror("Failed to open file 2");
+      close(fg);
+      return;
+    }
+    dup2(fg,1);
+    dup2(fd,0);
+    ExecuteRedirection(args[0]);
+    close(fd);
+    close(fg);
+
+  }
+
+  else if(p1 != -1)
+  {
+    char *args[100];
+    int top = 0;
+    char *save;
+    char *token = strtok_r(command,">",&save);
+    args[0] = token;
+    token = strtok_r(NULL," \t \n",&save);
+    args[1] = token;
+    int fd = open(args[1],O_WRONLY | O_TRUNC,644);
+    if(fd == -1)
+    {
+      perror("Failed to open file");
+      close(fd);
+      return;
+    }
+    dup2(fd, 1);
+    ExecuteRedirection(args[0]);
+    close(fd);
+  }
+  else if(p2 != -1)
+  {
+  char *args[100];
+  int top = 0;
+  char *save;
+  char *token = strtok_r(command,">>",&save);
+  args[0] = token;
+  token = strtok_r(NULL,"> \t \n",&save);
+  args[1] = token;
+  int fd = open(args[1],O_WRONLY | O_APPEND,644);
+  lseek(fd,0,SEEK_END);
+  if(fd == -1)
+  {
+    perror("Failed to open file");
+    close(fd);
+    return;
+  }
+  dup2(fd, 1);
+  ExecuteRedirection(args[0]);
+  close(fd);
+  }
+  else if(p3 != -1)
+  {
+    char *args[100];
+    int top = 0;
+    char *save;
+    char *token = strtok_r(command,"<",&save);
+    args[0] = token;
+    token = strtok_r(NULL,"< \n",&save);
+    args[1] = token;
+    int res = dup(0);
+    int l = 0;
+    while(!strncmp(args[1]+l," ",1))l++;
+    int fd = open(args[1]+l,O_RDONLY,644);
+    if(fd == -1)
+    {
+      perror("Failed to open file");
+      close(fd);
+      return;
+    }
+    dup2(fd,0);
+    ExecuteRedirection(args[0]);
+    dup2(res,fd);
+    // close(fd);
+  }
+  else
+  {
+    ExecuteFunction(command);
+  }
+}
+
+void ExecutePiping(char command[])
+{
+  int fin ;
+  fin = dup(0);
+  int fout;
+  fout = dup(1);
+  int cin = dup(fin);
+  int cout;
+  char * rest = NULL;
+  char *token;
+  char *args[100];
+  int j = 0;
+  for (token = strtok_r(command, "|", &rest);
+         token != NULL;
+         token = strtok_r(NULL, "|", &rest)) {
+           if(token != "")
+           {
+             args[j] = token;
+             j++;
+           }
+  }
+  int k = 0;
+  while(args[k] != NULL)
+  {
+    // int pipelines[2];
+    fflush(0);
+    // fflush(cin);
+    dup2(cin,0);
+    close(cin);
+    if(k+1 == j){
+      cout = dup(fout);
+    }
+    else{
+      int pdata[2];
+      pipe(pdata);
+      cout = pdata[1];
+      cin = pdata[0];
+    }
+    dup2(cout,1);
+    close(cout);
+    char tmd[1000];
+    for(int i = 0;i <strlen(args[k]);i++)
+    tmd[i] = args[k][i];
+    ExecuteRedirection(tmd);
+    for(int i = 0;i <strlen(args[k]);i++)
+    tmd[i] = 0;
+    k++;
+  }
+  j = 0;
+  while(j<k)
+  {
+    memset(args[j], 0 , strlen(args[j]));
+    j++;
+  }
+  fflush(0);
+  dup2(fout,1);
+  dup2(fin,0);
 }
 
 void chandler(int sig);
@@ -232,7 +445,6 @@ void loop_shell()
     hostname[1023] = '\0';
     gethostname(hostname, 1023);
     printf(""ANSI_COLOR_CYAN "<" ANSI_COLOR_RED"%s"ANSI_COLOR_CYAN"@"ANSI_COLOR_BLUE"%s:%s"ANSI_COLOR_CYAN ">:"ANSI_COLOR_RESET,getenv("USER"),hostname,printpath);
-    // printf( "<%s@%s:%s>:" ,getenv("USER"),hostname,printpath);
 
     //Breaking up all commands seperated by ";"
     char * cms = malloc(sizeof(char) * 1024);
@@ -247,8 +459,7 @@ void loop_shell()
       for(int i = 0;i < 1000;i++)
         tmd[i] = cmd[i];
       //Executing each command
-      // printf("Executing %s\n",tmd);
-      ExecuteFunction(tmd);
+      ExecutePiping(tmd);
       cmd = strtok(NULL,";");
     }
   }
@@ -287,7 +498,6 @@ void chandler(int sig)
         }
       }
       RemoveJob(pid);
-      // printf("HI\n");
 
     }
 }

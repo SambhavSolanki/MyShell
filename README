@@ -16,17 +16,19 @@ Specifications:
     commands. These functions in turn uses functions like ChangeFromTilda and functions from one
     another to realize their goal.
 
-3.Ls command:
-    "ls.h" contains the functions used to implement ls.
-
-4.System Commands:
+3.System Commands:
     strtok() and execvp() have been used to implement system commands. Further fork(), exit()
     etc. are used for Background commands.
 
-5.Pinfo:
+4.Pinfo:
     "pinfo.h" contains the functions used to implement pinfo.
 
-6.Finished Background Prcess:
-    ExecuteFunction() contains the code for this. When running background process, the child
-    process used to run system command is again forked before running execvp( in one of them.
-    The other one waits for the the one running execvp() and then prints termination message. 
+5.Background Prcess:
+    ExecuteFunction() contains the code for this. When running background process, the terminal
+    is set to to parent pgid and child group id isn't given the terminal.
+
+6.FG/BG:
+    Terminal switch between gid is used with Signals to implement it.
+
+7.Redirection | Piping:
+    Changing files descriptors of input and output streams using dup and dup2 is used to implement redirection.  

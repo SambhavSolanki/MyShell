@@ -69,6 +69,7 @@ void ChangeFromTilda(char path[])
 #include"fgbg.h"
 #include"echo.h"
 #include"jobs.h"
+#include"setenv.h"
 #include <netdb.h>
 
 
@@ -97,12 +98,27 @@ void ExecuteFunction(char command[])
   char * rest = NULL;
   char *token;
   char *args[100];
+  int flag = 0;
+  for(int i = 0;i<strlen(command);i++)
+  {
+    if(strncmp(command+i," ",1) && strncmp(command+i,"\t",1) && strncmp(command+i,"\n",1))
+    {
+        flag = i;
+    }
+  }
+  // printf("%d\n",flag);
+  if(!flag)
+  {
+    return;
+  }
+    // printf("3\n");
   for (token = strtok_r(command, " \t \n", &rest);
          token != NULL;
          token = strtok_r(NULL, " \t \n", &rest)) {
            if(token != "")
            {
              args[j] = token;
+             // printf("%s\n",args[j]);
              j++;
            }
   }
@@ -112,30 +128,37 @@ void ExecuteFunction(char command[])
     argno--;
     // strcpy(args[argno],"\0");
   }
-
+  // printf("%s\n",args[0]);
   //Executing the command
-  if(!strncmp(args[0],"quit",strlen(args[0])) || !strncmp(args[0],"quit\n",strlen(args[0])))
-  status = 0;
-  else if(!strncmp(args[0],"cd",strlen(args[0])) || !strncmp(args[0],"cd\n",strlen(args[0])))
+  if((strlen(args[0]) == strlen("quit")||strlen(args[0]) == strlen("quit\n")) && (!strncmp(args[0],"quit",strlen(args[0])) || !strncmp(args[0],"quit\n",strlen(args[0]))))
+  {
+    overkill();
+    status = 0; 
+  }
+  else if((strlen(args[0]) == strlen("cd")||strlen(args[0]) == strlen("cd\n")) && (!strncmp(args[0],"cd",strlen(args[0])) || !strncmp(args[0],"cd\n",strlen(args[0]))))
   ChangeDir(args[1]);
-  else if(!strncmp(args[0],"ls",strlen(args[0])) || !strncmp(args[0],"ls\n ",strlen(args[0])))
+  else if((strlen(args[0]) == strlen("ls")||strlen(args[0]) == strlen("ls\n")) && (!strncmp(args[0],"ls",strlen(args[0])) || !strncmp(args[0],"ls\n ",strlen(args[0]))))
   ListFiles(args,argno);
-  else if(!strncmp(args[0],"pwd",strlen(args[0])) || !strncmp(args[0],"pwd\n ",strlen(args[0])))
+  else if((strlen(args[0]) == strlen("pwd")||strlen(args[0]) == strlen("pwd\n")) && (!strncmp(args[0],"pwd",strlen(args[0])) || !strncmp(args[0],"pwd\n ",strlen(args[0]))))
   PrintPwd();
-  else if(!strncmp(args[0],"echo",strlen(args[0])) || !strncmp(args[0],"echo\n ",strlen(args[0])))
-  EchoStuff(args);
-  else if(!strncmp(args[0],"pinfo",strlen(args[0])) || !strncmp(args[0],"pinfo\n ",strlen(args[0])))
+  else if((strlen(args[0]) == strlen("echo")||strlen(args[0]) == strlen("echo\n")) && (!strncmp(args[0],"echo",strlen(args[0])) || !strncmp(args[0],"echo\n ",strlen(args[0]))))
+  EchoStuff(args,argno);
+  else if((strlen(args[0]) == strlen("pinfo")||strlen(args[0]) == strlen("pinfo\n")) && (!strncmp(args[0],"pinfo",strlen(args[0])) || !strncmp(args[0],"pinfo\n ",strlen(args[0]))))
   pinfoFunc(args);
-  else if(!strncmp(args[0],"jobs",strlen(args[0])) || !strncmp(args[0],"jobs\n ",strlen(args[0])))
+  else if((strlen(args[0]) == strlen("jobs")||strlen(args[0]) == strlen("jobs\n")) && (!strncmp(args[0],"jobs",strlen(args[0])) || !strncmp(args[0],"jobs\n ",strlen(args[0]))))
   JobsFunc();
-  else if(!strncmp(args[0],"overkill",strlen(args[0])) || !strncmp(args[0],"overkill\n ",strlen(args[0])))
+  else if((strlen(args[0]) == strlen("overkill")||strlen(args[0]) == strlen("overkill\n")) && (!strncmp(args[0],"overkill",strlen(args[0])) || !strncmp(args[0],"overkill\n ",strlen(args[0]))))
   overkill();
-  else if(!strncmp(args[0],"bg",strlen(args[0])) || !strncmp(args[0],"bg\n ",strlen(args[0])))
+  else if((strlen(args[0]) == strlen("bg")||strlen(args[0]) == strlen("bg\n")) && (!strncmp(args[0],"bg",strlen(args[0])) || !strncmp(args[0],"bg\n ",strlen(args[0]))))
   bg(args);
-  else if(!strncmp(args[0],"fg",strlen(args[0])) || !strncmp(args[0],"fg\n ",strlen(args[0])))
+  else if((strlen(args[0]) == strlen("fg")||strlen(args[0]) == strlen("fg\n")) && (!strncmp(args[0],"fg",strlen(args[0])) || !strncmp(args[0],"fg\n ",strlen(args[0]))))
   fg(args);
-  else if(!strncmp(args[0],"kjob",strlen(args[0])) || !strncmp(args[0],"kjob\n ",strlen(args[0])))
+  else if((strlen(args[0]) == strlen("kjob")||strlen(args[0]) == strlen("kjob\n")) && (!strncmp(args[0],"kjob",strlen(args[0])) || !strncmp(args[0],"kjob\n ",strlen(args[0]))))
   kjob(args);
+  else if((strlen(args[0]) == strlen("setenv")||strlen(args[0]) == strlen("setenv\n")) && (!strncmp(args[0],"setenv",strlen(args[0])) || !strncmp(args[0],"setenv\n ",strlen(args[0]))))
+  set(args);
+  else if((strlen(args[0]) == strlen("unsetenv")||strlen(args[0]) == strlen("unsetenv\n")) && (!strncmp(args[0],"unsetenv",strlen(args[0])) || !strncmp(args[0],"unsetenv\n ",strlen(args[0]))))
+  unset(args);
   else
   {
     int stat;
@@ -193,12 +216,13 @@ void ExecuteFunction(char command[])
   }
   char * yy = NULL;
   j = 0;
-  while(j<argno && args[j] != NULL)
+  while(j<=argno && args[j] != NULL)
   {
     memset(args[j], 0 , strlen(args[j]));
     args[j] = yy;
     j++;
   }
+  memset(command,0,strlen(command));
   return;
 
 }
@@ -246,7 +270,7 @@ void ExecuteRedirection(char command[])
     int res = dup(0);
     int l = 0;
     int fd = open(args[1],O_RDONLY,644);
-    int fg = open(args[2],O_CREAT | O_WRONLY | O_TRUNC,644);
+    int fg = open(args[2],O_CREAT | O_WRONLY | O_TRUNC,0644);
     if(fd == -1)
     {
       perror("Failed to open file 1");
@@ -261,9 +285,17 @@ void ExecuteRedirection(char command[])
     }
     dup2(fg,1);
     dup2(fd,0);
-    ExecuteRedirection(args[0]);
+    ExecuteFunction(args[0]);
     close(fd);
     close(fg);
+    int j = 0;
+    char *yy = NULL;
+    while(j<3 && args[j] != NULL)
+    {
+      memset(args[j], 0 , strlen(args[j]));
+      args[j] = yy;
+      j++;
+    }
 
   }
   else if(p2 != -1 && p3 != -1)
@@ -280,7 +312,7 @@ void ExecuteRedirection(char command[])
     int res = dup(0);
     int l = 0;
     int fd = open(args[1],O_RDONLY,644);
-    int fg = open(args[2],O_CREAT | O_WRONLY | O_APPEND,644);
+    int fg = open(args[2],O_CREAT | O_WRONLY | O_APPEND,0644);
     if(fd == -1)
     {
       perror("Failed to open file 1");
@@ -295,9 +327,18 @@ void ExecuteRedirection(char command[])
     }
     dup2(fg,1);
     dup2(fd,0);
-    ExecuteRedirection(args[0]);
+    ExecuteFunction(args[0]);
     close(fd);
     close(fg);
+    int j = 0;
+    char *yy = NULL;
+
+    while(j<3 && args[j] != NULL)
+    {
+      memset(args[j], 0 , strlen(args[j]));
+      args[j] = yy;
+      j++;
+    }
 
   }
 
@@ -310,7 +351,7 @@ void ExecuteRedirection(char command[])
     args[0] = token;
     token = strtok_r(NULL," \t \n",&save);
     args[1] = token;
-    int fd = open(args[1],O_WRONLY | O_TRUNC,644);
+    int fd = open(args[1],O_CREAT | O_WRONLY | O_TRUNC,0644);
     if(fd == -1)
     {
       perror("Failed to open file");
@@ -318,8 +359,17 @@ void ExecuteRedirection(char command[])
       return;
     }
     dup2(fd, 1);
-    ExecuteRedirection(args[0]);
+    ExecuteFunction(args[0]);
     close(fd);
+    int j = 0;
+    char *yy = NULL;
+
+    while(j<2 && args[j] != NULL)
+    {
+      memset(args[j], 0 , strlen(args[j]));
+      args[j] = yy;
+      j++;
+    }
   }
   else if(p2 != -1)
   {
@@ -330,7 +380,7 @@ void ExecuteRedirection(char command[])
   args[0] = token;
   token = strtok_r(NULL,"> \t \n",&save);
   args[1] = token;
-  int fd = open(args[1],O_WRONLY | O_APPEND,644);
+  int fd = open(args[1],O_CREAT | O_WRONLY | O_APPEND,0644);
   lseek(fd,0,SEEK_END);
   if(fd == -1)
   {
@@ -339,8 +389,17 @@ void ExecuteRedirection(char command[])
     return;
   }
   dup2(fd, 1);
-  ExecuteRedirection(args[0]);
+  ExecuteFunction(args[0]);
   close(fd);
+  int j = 0;
+  char *yy = NULL;
+
+  while(j<2 && args[j] != NULL)
+  {
+    memset(args[j], 0 , strlen(args[j]));
+    args[j] = yy;
+    j++;
+  }
   }
   else if(p3 != -1)
   {
@@ -354,7 +413,7 @@ void ExecuteRedirection(char command[])
     int res = dup(0);
     int l = 0;
     while(!strncmp(args[1]+l," ",1))l++;
-    int fd = open(args[1]+l,O_RDONLY,644);
+    int fd = open(args[1]+l,O_RDONLY);
     if(fd == -1)
     {
       perror("Failed to open file");
@@ -362,18 +421,31 @@ void ExecuteRedirection(char command[])
       return;
     }
     dup2(fd,0);
-    ExecuteRedirection(args[0]);
+    ExecuteFunction(args[0]);
     dup2(res,fd);
-    // close(fd);
+    close(fd);
+    int j = 0;
+    char *yy = NULL;
+    while(j<2 && args[j] != NULL)
+    {
+      memset(args[j], 0 , strlen(args[j]));
+      args[j] = yy;
+      j++;
+    }
   }
   else
   {
     ExecuteFunction(command);
+    // memset(command, 0 , strlen(command));
   }
+  for(int j = 0;j<strlen(command);j++)
+  command[j] = 0;
 }
 
 void ExecutePiping(char command[])
 {
+  if(strlen(command) <= 1)
+    return;
   int fin ;
   fin = dup(0);
   int fout;
@@ -415,6 +487,7 @@ void ExecutePiping(char command[])
     char tmd[1000];
     for(int i = 0;i <strlen(args[k]);i++)
     tmd[i] = args[k][i];
+    // printf("2\n");
     ExecuteRedirection(tmd);
     for(int i = 0;i <strlen(args[k]);i++)
     tmd[i] = 0;
@@ -458,6 +531,7 @@ void loop_shell()
       char tmd[1000];
       for(int i = 0;i < 1000;i++)
         tmd[i] = cmd[i];
+      // printf("1\n");
       //Executing each command
       ExecutePiping(tmd);
       cmd = strtok(NULL,";");

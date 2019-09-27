@@ -98,7 +98,8 @@ void kjob(char *args[])
 {
   if(args[1] == NULL || args[2] == NULL || args[3] !=NULL)
   {
-    printf("Invalid arguments for bg\n");
+    printf("Invalid arguments for kjob\n");
+    return;
   }
   int p = 0;
   int len = strlen(args[1]);

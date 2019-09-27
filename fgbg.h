@@ -3,7 +3,8 @@ void fg(char *args[])
   int status;
   if(args[1] == NULL || args[2] != NULL)
   {
-    printf("Invalid arguments for bg\n");
+    printf("Invalid arguments for fg\n");
+    return;
   }
   int p = 0;
   int len = strlen(args[1]);
@@ -31,6 +32,7 @@ void bg(char *args[])
   if(args[1] == NULL || args[2] != NULL)
   {
     printf("Invalid arguments for bg\n");
+    return;
   }
   int p = 0;
   int len = strlen(args[1]);

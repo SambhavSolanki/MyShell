@@ -1,9 +1,9 @@
 #include<stdio.h>
 
-void EchoStuff(char * cmd[])
+void EchoStuff(char * cmd[],int argno)
 {
   int k = 1;
-  while(cmd[k] != NULL)
+  while(k < argno)
   {
     if(!strncmp(cmd[k],"\"",1) && !strncmp(cmd[k] + strlen(cmd[k])-1 ,"\"",1))
     {
